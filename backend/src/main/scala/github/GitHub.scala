@@ -5,9 +5,9 @@ import zio.json.{DeriveJsonDecoder, JsonDecoder}
 sealed trait WebhookAction
 
 object WebhookAction {
-  case object Opened extends WebhookAction
-  case object Closed extends WebhookAction
-
+  case object Opened  extends WebhookAction
+  case object Closed  extends WebhookAction
+  case object Labeled extends WebhookAction
   case object Created extends WebhookAction
   case object Edited  extends WebhookAction
   case object Deleted extends WebhookAction
@@ -18,6 +18,7 @@ object WebhookAction {
     case "created" => Right(Created)
     case "edited"  => Right(Edited)
     case "deleted" => Right(Deleted)
+    case "labeled" => Right(Labeled)
     case other     => Left(s"Invalid WebhookAction $other")
   }
 }
@@ -28,6 +29,7 @@ object WebhookPayload {
   final case class IssueCommentWebhook(
       action: WebhookAction,
       sender: GithubUser,
+      issue: IssuePayload,
       comment: CommentPayload
   ) extends WebhookPayload
 
@@ -51,6 +53,7 @@ object WebhookPayload {
 
 }
 
+// chimney
 final case class IssuePayload(
     id: Long,
     number: Int,

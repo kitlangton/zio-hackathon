@@ -32,7 +32,6 @@ final case class GitHubAPILive(config: GitHubConfig, sttp: SttpClient.Service) e
       basicRequest
         .get(issuesUrl(owner, repo, "zio-hackathon"))
         .header("Authorization", s"token ${config.accessToken}")
-    println(request)
 
     sttp
       .send(request)

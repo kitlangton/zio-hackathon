@@ -2,8 +2,9 @@ package hackathon
 
 import hackathon.api.{Issue, IssueId}
 import zio._
-import zio.magic._
 import zio.macros.accessible
+import zio.magic._
+import zio.stream.{UStream, ZStream}
 
 import java.sql.Connection
 
@@ -14,34 +15,62 @@ trait IssueRepository {
   def save(list: List[Issue]): Task[Unit]
 
   def claim(issueId: IssueId, user: String): Task[Unit]
+
+  def issueStream: UStream[Issue]
+
+  def claimsStream: UStream[Claim]
 }
 
 object IssueRepository {
-  val live: URLayer[Has[Connection], Has[IssueRepository]] =
-    IssueRepositoryLive.toLayer[IssueRepository]
+  val live: ZLayer[Has[Connection], Nothing, Has[IssueRepository]] = {
+    for {
+      connection <- ZIO.service[Connection]
+      issueHub   <- Hub.unbounded[Issue]
+      claimsHub  <- Hub.unbounded[Claim]
+    } yield IssueRepositoryLive(connection, issueHub, claimsHub)
+  }.toLayer[IssueRepository]
 }
 
-final case class IssueRepositoryLive(connection: Connection) extends IssueRepository {
+final case class Claim(issueId: IssueId, s: String)
+
+final case class IssueRepositoryLive(
+    connection: Connection,
+    issueHub: Hub[Issue],
+    claimsHub: Hub[Claim]
+) extends IssueRepository {
   import QuillContext._
 
   val env = Has(connection)
 
-  override def save(list: List[Issue]): Task[Unit] =
-    run {
-      liftQuery(list).foreach { i =>
-        query[Issue]
-          .insert(i)
-          .onConflictUpdate(_.id)(_.title -> _.title, _.body -> _.body)
-      }
-    }.provide(env).unit
+  override def save(issues: List[Issue]): Task[Unit] =
+    for {
+      _ <- run {
+        liftQuery(issues).foreach { i =>
+          query[Issue]
+            .insert(i)
+            .onConflictUpdate(_.id)(_.title -> _.title, _.body -> _.body)
+        }
+      }.provide(env).unit
+      _ <- issueHub.publishAll(issues)
+    } yield ()
 
   override def claim(issueId: IssueId, user: String): Task[Unit] =
-    run {
-      query[Issue].filter(_.id == lift(issueId)).update(_.claimant -> Some(lift(user)))
-    }.provide(env).unit
+    for {
+      _ <- run {
+        query[Issue].filter(issue => issue.id == lift(issueId)).update(_.claimant -> Some(lift(user)))
+      }.provide(env).unit
+      claim = Claim(issueId, user)
+      _ <- claimsHub.publish(claim)
+    } yield ()
 
   override def all: Task[List[Issue]] =
     run(query[Issue]).provide(env)
+
+  override def issueStream: UStream[Issue] =
+    ZStream.fromHub(issueHub)
+
+  override def claimsStream: UStream[Claim] =
+    ZStream.fromHub(claimsHub)
 }
 
 object IssueRepositoryDemo extends App {
@@ -49,7 +78,7 @@ object IssueRepositoryDemo extends App {
     Issue(
       id = IssueId(1),
       number = 1,
-      title = "Quill-jdbc-zio causes thread starvation",
+      title = "FANCY ISSUE",
       body = Some("Cool issue."),
       owner = "kitlangton",
       repo = "zio-app",
@@ -68,18 +97,16 @@ object IssueRepositoryDemo extends App {
     )
   )
 
-  val program = for {
-    _      <- IssueRepository.save(exampleIssues)
-    issues <- IssueRepository.all
-    _      <- IssueRepository.claim(IssueId(2), "bobby")
-    _      <- ZIO.debug(PrettyPrint(issues))
-  } yield ()
+  // TODO: Test Containers
+  // TODO: GitHub OAuth
+  val program: ZIO[Has[IssueRepository], Throwable, Unit] =
+    for {
+      _      <- IssueRepository.save(exampleIssues)
+      issues <- IssueRepository.all
+      _      <- IssueRepository.claim(IssueId(2), "bobby")
+      _      <- ZIO.debug(PrettyPrint(issues))
+    } yield ()
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
-    program
-      .inject(
-        IssueRepository.live,
-        QuillContext.live
-      )
-      .exitCode
+    program.inject(IssueRepository.live, QuillContext.live).exitCode
 }
