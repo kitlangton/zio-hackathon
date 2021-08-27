@@ -3,6 +3,7 @@ $gray400: #A8A29E;
 $gray500: #78716C;
 $gray800: #292524;
 $orange: #F97316;
+$orange300: #FDBA74;
 
 .tag {
   color: $gray400;
@@ -16,6 +17,7 @@ $orange: #F97316;
 
   &.selected {
     color: $orange;
+
     &:hover {
       cursor: pointer;
       color: lighten($orange, 10);
@@ -24,6 +26,7 @@ $orange: #F97316;
 
   &.deselected {
     color: $gray500;
+
     &:hover {
       cursor: pointer;
       color: $gray400;
@@ -81,6 +84,22 @@ $orange: #F97316;
 }
 
 
+.issue-claim {
+  margin-top: 8px;
+  display: flex;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: $orange300;
+
+  .issue-claimant {
+    //color: $gray400;
+    color: $orange300;
+    margin-left: 8px;
+    font-weight: bold;
+  }
+
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: repeat(12, 60px);
@@ -94,9 +113,31 @@ $orange: #F97316;
 .sidebar {
   //background: red;
   grid-column: 1 / 5;
+
+  div {
+    position: sticky;
+    top: 60px;
+  }
+
+  //left: 0;
 }
 
 .main {
   //background: red;
   grid-column: 6 / 13;
+}
+
+
+.gradient {
+  height: 300px;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(#1C1917, #1C1917, #1C1917, #1C1917,  rgba(#1C1917, 0.9), rgba(#1C1917, 0.1), rgba(#1C1917, 0),rgba(#1C1917, 0), rgba(#1C1917, 0));
+  //background: blue;
+  // background: rgba(red, 0.3);
+  //background: rgba(#FFF, 0.2);
+
 }

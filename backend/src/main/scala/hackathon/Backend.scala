@@ -1,6 +1,6 @@
-package example
+package hackathon
 
-import example.protocol.{ExampleService}
+import hackathon.protocol.{ExampleService}
 import zio._
 import zio.app.DeriveRoutes
 import zio.console._

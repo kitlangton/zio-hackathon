@@ -1,4 +1,4 @@
-package example
+package hackathon
 
 import com.raquo.laminar.api.L._
 import org.scalajs.dom
@@ -43,7 +43,7 @@ object Main {
     }
 
   def storeUnmount(rootNode: RootNode): Unit = {
-    val unmountFunction: js.Function0[Any] = () => {rootNode.unmount()}
+    val unmountFunction: js.Function0[Any] = () => { rootNode.unmount() }
     dom.window.asInstanceOf[js.Dynamic].__laminar_root_unmount = unmountFunction
   }
 

@@ -1,6 +1,6 @@
-name        := "hackathon"
+name := "hackathon"
 description := "A full-stack Scala application powered by ZIO and Laminar."
-version     := "0.0.1"
+version := "0.0.1"
 
 val animusVersion        = "0.1.9"
 val boopickleVersion     = "1.4.0"
@@ -46,7 +46,7 @@ lazy val backend = project
   .enablePlugins(JavaAppPackaging)
   .settings(
     sharedSettings,
-    Compile / run / mainClass := Some("example.Backend"),
+    Compile / run / mainClass := Some("hackathon.Backend"),
     libraryDependencies ++= Seq(
       "io.github.kitlangton"          %% "zio-magic"              % zioMagicVersion,
       "dev.zio"                       %% "zio-config"             % zioConfigVersion,

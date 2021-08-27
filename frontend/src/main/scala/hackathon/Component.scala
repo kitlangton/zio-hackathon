@@ -1,4 +1,4 @@
-package example
+package hackathon
 
 import com.raquo.laminar.api.L._
 

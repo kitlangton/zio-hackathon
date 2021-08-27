@@ -1,4 +1,4 @@
-package example.protocol
+package hackathon.protocol
 
 import zio._
 
