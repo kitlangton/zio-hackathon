@@ -2,11 +2,10 @@ package hackathon
 
 import com.raquo.laminar.api.L._
 import animus._
-
-import java.util.UUID
+import hackathon.api.{Issue, IssueId}
 
 object Claimants {
-  val claimants = Var(Map.empty[UUID, String])
+  val claimants = Var(Map.empty[IssueId, String])
 }
 
 final case class IssueView(issue: Issue) extends Component {
@@ -33,7 +32,7 @@ final case class IssueView(issue: Issue) extends Component {
         cls("issue-info"),
         div(
           cls("issue-project"),
-          issue.project
+          issue.repo
         ),
         div(
           cls("issue-number"),

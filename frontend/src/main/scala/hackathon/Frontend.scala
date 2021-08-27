@@ -3,8 +3,9 @@ package hackathon
 import animus._
 import com.raquo.airstream.core.Signal
 import com.raquo.laminar.api.L._
-import hackathon.protocol.ExampleService
+import hackathon.api._
 import zio.app.DeriveClient
+import zio.interop.laminar._
 
 object Colors {
   val orange  = "#F97316"
@@ -14,8 +15,9 @@ object Colors {
 }
 
 object Frontend {
-  val client = DeriveClient.gen[ExampleService]
+  val client = DeriveClient.gen[IssueAPI]
 
+  val issuesVar   = Var(List.empty[Issue])
   val projectTags = TagSection("PROJECTS", projects)
 
   def view: Div = {
@@ -38,17 +40,15 @@ object Frontend {
   }
 
   val $visibleIssues: Signal[List[Issue]] =
-    projectTags.selectedTags.signal.map { tags =>
-      if (tags.isEmpty) Issue.examples
-      else Issue.examples.filter(i => tags(i.project.toUpperCase))
+    projectTags.selectedTags.signal.combineWithFn(issuesVar.signal) { (tags, issues) =>
+      if (tags.isEmpty) issues
+      else issues.filter(i => tags(i.repo.toUpperCase))
     }
 
   def heightDynamic($isVisible: Signal[Boolean]): Mod[HtmlElement] = Seq(
     overflowY.hidden,
     onMountBind { (el: MountContext[HtmlElement]) =>
       lazy val $height =
-//        ResizeObserver
-//        .resize(el.thisNode.ref.firstElementChild)
         EventStream
           .periodic(100)
           .mapTo(el.thisNode.ref.scrollHeight.toDouble)
