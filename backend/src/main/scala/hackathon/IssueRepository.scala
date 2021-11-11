@@ -7,6 +7,7 @@ import zio.magic._
 import zio.stream.{UStream, ZStream}
 
 import java.sql.Connection
+import java.util.UUID
 
 @accessible
 trait IssueRepository {
@@ -19,6 +20,12 @@ trait IssueRepository {
   def issueStream: UStream[Issue]
 
   def claimsStream: UStream[Claim]
+
+  def saveUser(login: String, id: Long, token: String): Task[Unit]
+
+  def users: Task[List[String]]
+
+  def accessToken(githubId: Long): Task[String]
 }
 
 object IssueRepository {
@@ -59,8 +66,10 @@ final case class IssueRepositoryLive(
       _ <- run {
         query[Issue].filter(issue => issue.id == lift(issueId)).update(_.claimant -> Some(lift(user)))
       }.provide(env).unit
-      claim = Claim(issueId, user)
-      _ <- claimsHub.publish(claim)
+      issue <- run {
+        query[Issue].filter { _.id == lift(issueId) }
+      }.provide(env).map(_.head)
+      _ <- issueHub.publish(issue)
     } yield ()
 
   override def all: Task[List[Issue]] =
@@ -71,7 +80,30 @@ final case class IssueRepositoryLive(
 
   override def claimsStream: UStream[Claim] =
     ZStream.fromHub(claimsHub)
+
+  override def saveUser(login: String, id: Long, token: String): Task[Unit] = {
+    val account = Account(id = UUID.randomUUID(), githubLogin = login, githubId = id, githubAccessToken = token)
+    run {
+      query[Account].insert(lift(account))
+    }.provide(env).unit
+  }
+
+  override def users: Task[List[String]] =
+    run { query[Account].map(_.githubLogin) }
+      .provide(env)
+
+  override def accessToken(id: Long): Task[String] =
+    run { query[Account].filter(_.githubId == lift(id)).map(_.githubAccessToken) }
+      .map(_.head)
+      .provide(env)
 }
+
+final case class Account(
+    id: UUID,
+    githubLogin: String,
+    githubId: Long,
+    githubAccessToken: String
+)
 
 object IssueRepositoryDemo extends App {
   val exampleIssues = List(

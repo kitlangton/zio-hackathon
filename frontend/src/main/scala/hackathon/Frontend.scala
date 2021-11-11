@@ -4,8 +4,12 @@ import animus._
 import com.raquo.airstream.core.Signal
 import com.raquo.laminar.api.L._
 import hackathon.api._
+import zio.UIO
 import zio.app.DeriveClient
 import zio.interop.laminar._
+
+import java.util
+import scala.collection.immutable.SortedMap
 
 object Colors {
   val orange  = "#F97316"
@@ -17,11 +21,18 @@ object Colors {
 object Frontend {
   val client = DeriveClient.gen[IssueAPI]
 
-  val issuesVar   = Var(List.empty[Issue])
+  val issuesVar   = Var(SortedMap.empty[Long, Issue])
   val projectTags = TagSection("PROJECTS", projects)
 
   def view: Div = {
     div(
+      client.issues.toEventStream --> { issues =>
+        val map = SortedMap.from(issues.map { i => i.id.id -> i })
+        issuesVar.set(map)
+      },
+      client.issueStream.toEventStream --> { issue =>
+        issuesVar.update(_.updated(issue.id.id, issue))
+      },
       cls("main-grid"),
       div(
         cls("sidebar"),
@@ -41,8 +52,8 @@ object Frontend {
 
   val $visibleIssues: Signal[List[Issue]] =
     projectTags.selectedTags.signal.combineWithFn(issuesVar.signal) { (tags, issues) =>
-      if (tags.isEmpty) issues
-      else issues.filter(i => tags(i.repo.toUpperCase))
+      if (tags.isEmpty) issues.values.toList
+      else issues.values.filter(i => tags(i.repo.toUpperCase)).toList
     }
 
   def heightDynamic($isVisible: Signal[Boolean]): Mod[HtmlElement] = Seq(
@@ -66,18 +77,17 @@ object Frontend {
       div(
         cls("gradient")
       ),
-      children <-- $visibleIssues.splitTransition(identity) { (_, issue, _, transition) =>
+      children <-- $visibleIssues.splitTransition(_.id) { (_, _, $issue, transition) =>
         div(
-          IssueView(issue),
+          IssueView($issue),
           heightDynamic(transition.$isActive),
-//          transition.height,
           transition.opacity
         )
       }
     )
 
   lazy val projects: List[String] =
-    List("ZIO", "ZIO-HTTP", "ZIO-CACHE", "ZIO-CLI", "CALIBAN")
+    List("ZIO", "ZIO-HTTP", "ZIO-CACHE", "ZIO-CLI", "CALIBAN", "ZIO-HACKATHON")
 
   lazy val tags: List[String] =
     List("EASY", "MEDIUM", "HARD")

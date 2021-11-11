@@ -17,6 +17,10 @@ export default ({mode}) => {
                     changeOrigin: true,
                     rewrite: (path) => path.replace(/^\/api/, '')
                 },
+                '/oauth/github': {
+                    target: 'http://localhost:8088/',
+                    changeOrigin: false,
+                },
             }
         },
         publicDir: './src/main/static/public',

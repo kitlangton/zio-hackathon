@@ -5,7 +5,7 @@ import zio.config._
 import zio.config.magnolia._
 import zio.config.typesafe._
 
-final case class GitHubConfig(accessToken: String)
+final case class GitHubConfig(accessToken: String, clientId: String, clientSecret: String)
 
 final case class Config(github: GitHubConfig)
 
